@@ -17,17 +17,12 @@
 #define WIDTH 12 // width of the matrix
 #define HEIGHT 8 // height of the matrix
 #define MATRIX_Y_REFLECT true // whether to reflect the matrix over the Y axis
-#define MIN_BRIGHTNESS 7// minimum brightness for auto brightness
+#define MIN_BRIGHTNESS 7 // minimum brightness for auto brightness
+#define MAX_BRIGHTNESS 255 // minimum brightness for auto brightness
 
-uint8_t brightness = 255;
-bool autoB = true;
-uint8_t hue = 0;
-bool autoHue = true;
-bool faded = false;
+uint8_t brightness = 255, hue = 0;
+bool autoHue = true, autoB = true faded = false;
 uint32_t ms;
-int minB = 7; 
-uint16_t buttonUp, buttonDown, buttonFN, pot;
-
 CRGB leds[NUM_LEDS];
 
 uint16_t XY (uint8_t x, uint8_t y)
@@ -86,10 +81,10 @@ void loop()
     faded = true;
   }
   else {
-    buttonUp = digitalRead(PIN_BUTTON_UP);
-    buttonDown = digitalRead(PIN_BUTTON_DOWN);
-    buttonFN = digitalRead(PIN_BUTTON_FN);
-    int pot = analogRead(PIN_POT); // potentiometer
+    int buttonUp = digitalRead(PIN_BUTTON_UP);
+    int buttonDown = digitalRead(PIN_BUTTON_DOWN);
+    int buttonFN = digitalRead(PIN_BUTTON_FN);
+    uint16_t pot = analogRead(PIN_POT); // potentiometer
     
     if (buttonUp) {
       changeTime(1+(buttonFN*60*60)); // either increase hours or minutes

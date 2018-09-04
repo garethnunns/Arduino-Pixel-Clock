@@ -100,7 +100,7 @@ void loop()
     }
     
     if (buttonFN) {
-      leds[STATUS_LED] = CRGB::Blue;
+      leds[STATUS_LED] = CRGB::Plaid;
       
       autoHue = pot > 1000; // if you turn it up all the way it enables auto hue
       hue = map(pot, 0, 1000, 0, 255);
@@ -111,7 +111,7 @@ void loop()
     }
     
     if (autoB) {
-      leds[STATUS_LED_AUTOB] = CRGB::Blue;
+      leds[STATUS_LED_AUTOB] = CRGB::MediumOrchid;
       
       if(hour() < 8)
         brightness = MIN_BRIGHTNESS;
@@ -124,7 +124,7 @@ void loop()
     }
 
     if (autoHue) {
-      leds[STATUS_LED_AUTOHUE] = CRGB::Blue;
+      leds[STATUS_LED_AUTOHUE] = CRGB::LightCoral;
 
       // red at 8 then through the spectrum from there
       hue = ((long)(((long)(hour() >= 8 ? hour()-8 : 16+hour())*3600)+((minute()*60)+second()))*(uint32_t)255)/86400;
@@ -145,9 +145,9 @@ void writeTime(int hours, int mins) {
   splitNumber(mins,c3,c4);
   
   writeNumber(0,c1,CHSV(hue, 255, 255));
-  writeNumber(1,c2,CHSV(hue+30, 255, 255));
+  writeNumber(1,c2,CHSV(hue + 50, 255, 255));
   writeNumber(2,c3,CHSV(hue, 255, 255));
-  writeNumber(3,c4,CHSV(hue+30, 255, 255));
+  writeNumber(3,c4,CHSV(hue + 50, 255, 255));
 
   float seconds_ind_length = 60 / WIDTH; // how many seconds each of the bottom represent
 

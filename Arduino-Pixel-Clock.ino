@@ -52,9 +52,9 @@ void setup() {
 
   setSyncProvider(RTC.get);   // the function to get the time from the RTC
   if(timeStatus()!= timeSet) 
-     leds[STATUS_LED] = CHSV(0, 255, 255); // red if it hasn't been set
+     leds[STATUS_LED] = CRGB::Red; // red if it hasn't been set
   else
-     leds[STATUS_LED] = CHSV(96, 255, 255); // green if all good
+     leds[STATUS_LED] = CRGB::Green; // green if all good
 
   Serial.println(RTC.temperature() / 4.);
 
@@ -64,9 +64,9 @@ void setup() {
 
   //changeTime(1);
   
-  for( byte y = 0; y < HEIGHT; y++) { // full blue at start up
+  for( byte y = 0; y < HEIGHT; y++) { // purple at start up
     for( byte x = 0; x < WIDTH; x++) {
-      leds[XY(x, y)]  = CHSV(171, 255, 255);
+      leds[XY(x, y)]  = CRGB::Purple;
     }
   }
 }

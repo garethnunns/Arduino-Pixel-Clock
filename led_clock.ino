@@ -4,9 +4,17 @@
 
 #define NUM_LEDS 100
 #define DATA_PIN 3
+#define PIN_POT 0
+#define PIN_BUTTON_UP 6
+#define PIN_BUTTON_DOWN 8
+#define PIN_BUTTON_FN 10
 #define WIDTH 12
 #define HEIGHT 8
-#define START_OFFSET 4
+#define START_OFFSET 0
+#define STATUS_LED_AUTOB 96
+#define STATUS_LED_AUTOHUE 97
+#define STATUS_LED_TIME_ADJUST 98
+#define STATUS_LED 99
 
 int brightness = 255;
 bool autoB = true;
@@ -42,19 +50,19 @@ void setup() {
 
   setSyncProvider(RTC.get);   // the function to get the time from the RTC
   if(timeStatus()!= timeSet) 
-     leds[0] = CHSV(0, 255, 255); // red if it hasn't been set
+     leds[STATUS_LED] = CHSV(0, 255, 255); // red if it hasn't been set
   else
-     leds[0] = CHSV(96, 255, 255); // green if all good
+     leds[STATUS_LED] = CHSV(96, 255, 255); // green if all good
 
   Serial.println(RTC.temperature() / 4.);
 
-  pinMode(6, INPUT); // button up
-  pinMode(8, INPUT); // button down
-  pinMode(10, INPUT); // button function
+  pinMode(PIN_BUTTON_UP, INPUT); // button up
+  pinMode(PIN_BUTTON_DOWN, INPUT); // button down
+  pinMode(PIN_BUTTON_FN, INPUT); // button function
 
   //changeTime(1);
   
-  for( byte y = 0; y < HEIGHT; y++) {    // random blue
+  for( byte y = 0; y < HEIGHT; y++) { // full blue at start up
     for( byte x = 0; x < WIDTH; x++) {
       leds[XY(x, y)]  = CHSV(171, 255, 255);
     }
@@ -62,6 +70,7 @@ void setup() {
 }
 
 void changeTime(int change) {
+  // change the time by the specified number of seconds
   unsigned long t = now() + change;
   RTC.set(t);
   setTime(t);
@@ -70,43 +79,54 @@ void changeTime(int change) {
 void loop()
 {
   ms = millis();
-  if(!faded || (ms < 3000)) { // fade in (because millis resets after 50 days only do it once)
+  if(!faded || (ms < 3000)) { // fade in
     FastLED.setBrightness(scale8(brightness, (ms * 256) / 3000));
     faded = true;
   }
   else {
-    buttonUp = digitalRead(6);
-    buttonDown = digitalRead(8);
-    buttonFN = digitalRead(10);
-    int pot = analogRead(A0);
+    buttonUp = digitalRead(PIN_BUTTON_UP);
+    buttonDown = digitalRead(PIN_BUTTON_DOWN);
+    buttonFN = digitalRead(PIN_BUTTON_FN);
+    int pot = analogRead(PIN_POT); // potentiometer
     
     if (buttonUp) {
-      changeTime(1+(buttonFN*60*60));
+      changeTime(1+(buttonFN*60*60)); // either increase hours or minutes
       fadeToBlackBy(leds, NUM_LEDS, 150);
-      leds[2] = CRGB::Green;
-      delay(200);
+      leds[STATUS_LED_TIME_ADJUST] = CRGB::Yellow;
+      delay(100*(buttonFN*2));
     }
     if (buttonDown) {
-      changeTime(-1-(buttonFN*60*60));
+      changeTime(-1-(buttonFN*60*60)); // either decrease hours or minutes
       fadeToBlackBy(leds, NUM_LEDS, 150);
-      leds[2] = CRGB::Red;
-      delay(200);
+      leds[STATUS_LED_TIME_ADJUST] = CRGB::Purple;
+      delay(100*(buttonFN*2));
     }
+    
     if (buttonFN) {
-      leds[3] = CRGB::Blue;
-      autoHue = pot > 1000;
+      leds[STATUS_LED] = CRGB::Blue;
+      
+      autoHue = pot > 1000; // if you turn it up all the way it enables auto hue
       hue = map(pot, 0, 1000, 0, 255);
     }
     else {
-      autoB = pot > 1000;
+      autoB = pot > 1000; // if you turn it up all the way it enables auto brightness
       brightness = map(pot, 0, 1000, 0, 255);
     }
     
-    if(autoB) {
+    if (autoB) {
+      leds[STATUS_LED_AUTOB] = CRGB::Blue;
+      
       if(hour() < 8) brightness = minB;
       else if(hour() < 10) brightness = minB+ (((((hour()-8)*3600) + (minute()*60) + second())*(uint32_t)(255-minB))/7200);
       else if(hour() < 21) brightness = 255;
       else brightness = 255 - (((((hour()-21)*3600) + (minute()*60) + second())*(uint32_t)(255-minB))/10800);
+    }
+
+    if(autoHue) {
+      leds[STATUS_LED_AUTOHUE] = CRGB::Blue;
+
+      // red at 8 then through the spectrum from there
+      hue = ((long)(((long)(hour() >= 8 ? hour()-8 : 16+hour())*3600)+((minute()*60)+second()))*(uint32_t)255)/86400;
     }
     
     FastLED.setBrightness(brightness);
@@ -116,12 +136,12 @@ void loop()
 }
 
 void writeTime(int hours, int mins) {
+  // output the time to the LEDS
+  
   fadeToBlackBy(leds, NUM_LEDS, 15);
   int c1, c2, c3, c4;
   splitNumber(hours,c1,c2);
   splitNumber(mins,c3,c4);
-
-  if(autoHue) hue = ((long)(((long)(hour() >= 8 ? hour()-8 : 16+hour())*3600)+((minute()*60)+second()))*(uint32_t)255)/86400;
   
   writeNumber(0,c1,CHSV(hue, 255, 255));
   writeNumber(1,c2,CHSV(hue+30, 255, 255));
@@ -129,19 +149,23 @@ void writeTime(int hours, int mins) {
   writeNumber(3,c4,CHSV(hue+30, 255, 255));
 
   for(int i = 0; i<WIDTH; i++) { // bottom row
-    if(second()>=(i*5) && second()<((i*5)+5)) leds[XY(i,7)] = CHSV((int)((i*255)/WIDTH), 200, 255);
+    if(second()>=(i*5) && second()<((i*5)+5)) 
+      leds[XY(i,HEIGHT-1)] = CHSV((int)((i*255)/WIDTH), 200, 255);
   }
   
   FastLED.show();
 }
 
 void splitNumber(int num, int &one, int &two) {
+  // split number into two digits
   one = (int)(num/10)%10;
   two = num % 10;
 }
 
 void writeNumber(int pos, int num, CRGB col) {
-  pos *= 3;
+  // write an individual num to a pos with the specifeied colour (col)
+  
+  pos *= 3; // because width of 12 (each digit 3 wide)
   switch(num) {
     case 0:
       for(int i = 1; i<=5; i++) { // sides

@@ -2,50 +2,52 @@
 #include <TimeLib.h>
 #include <DS3232RTC.h>
 
-#define NUM_LEDS 100
-#define DATA_PIN 3
-#define PIN_POT 0
-#define PIN_BUTTON_UP 6
-#define PIN_BUTTON_DOWN 8
-#define PIN_BUTTON_FN 10
-#define WIDTH 12
-#define HEIGHT 8
-#define START_OFFSET 0
-#define STATUS_LED_AUTOB 96
-#define STATUS_LED_AUTOHUE 97
-#define STATUS_LED_TIME_ADJUST 98
-#define STATUS_LED 99
+#define PIN_POT 0 // potentiometer (input)
+#define PIN_DATA 3 // LEDs data pin (output)
+#define PIN_BUTTON_UP 6 // button to increment clock (input)
+#define PIN_BUTTON_DOWN 8 // button to decrement clock (input)
+#define PIN_BUTTON_FN 10 // button to change the function of the inputs
+#define START_OFFSET 0 // where the matrix starts
+#define STATUS_LED_AUTOB 96 // whether auto brightness is enabled
+#define STATUS_LED_AUTOHUE 97 // whether auto hue is enabled
+#define STATUS_LED_TIME_ADJUST 98 // indicated which way the time is being adjusted
+#define STATUS_LED 99 // shows an error at start up and indicates if function button is enabled
 
-int brightness = 255;
+#define NUM_LEDS 100
+#define WIDTH 12 // width of the matrix
+#define HEIGHT 8 // height of the matrix
+#define MATRIX_Y_REFLECT true // whether to reflect the matrix over the Y axis
+#define MIN_BRIGHTNESS 7// minimum brightness for auto brightness
+
+uint8_t brightness = 255;
 bool autoB = true;
-int hue = 0;
+uint8_t hue = 0;
 bool autoHue = true;
 bool faded = false;
 uint32_t ms;
-int minB = 7; // minimum brightness for auto brightness
-int buttonUp = 0;
-int buttonDown = 0;
-int buttonFN = 0;
-int pot;
+int minB = 7; 
+uint16_t buttonUp, buttonDown, buttonFN, pot;
 
 CRGB leds[NUM_LEDS];
 
-uint16_t XY( uint8_t x, uint8_t y)
-{
+uint16_t XY (uint8_t x, uint8_t y)
+{ 
   uint16_t i;
-  if( y & 0x01) {
+  if ( (MATRIX_Y_REFLECT ^ y) & 0x01) {
     // Odd rows run backwards
     uint8_t reverseX = (WIDTH - 1) - x;
     i = (y * WIDTH) + reverseX;
-  } else {
+  } 
+  else {
     // Even rows run forwards
     i = (y * WIDTH) + x;
   }
+  
   return (i+START_OFFSET);
 }
 
 void setup() {
-  FastLED.addLeds<WS2811, DATA_PIN, RGB>(leds, NUM_LEDS);
+  FastLED.addLeds<WS2811, PIN_DATA, RGB>(leds, NUM_LEDS);
   Serial.begin(9600);
 
   setSyncProvider(RTC.get);   // the function to get the time from the RTC
@@ -79,7 +81,7 @@ void changeTime(int change) {
 void loop()
 {
   ms = millis();
-  if(!faded || (ms < 3000)) { // fade in
+  if (!faded || (ms < 3000)) { // fade in
     FastLED.setBrightness(scale8(brightness, (ms * 256) / 3000));
     faded = true;
   }
@@ -116,13 +118,13 @@ void loop()
     if (autoB) {
       leds[STATUS_LED_AUTOB] = CRGB::Blue;
       
-      if(hour() < 8) brightness = minB;
-      else if(hour() < 10) brightness = minB+ (((((hour()-8)*3600) + (minute()*60) + second())*(uint32_t)(255-minB))/7200);
+      if(hour() < 8) brightness = MIN_BRIGHTNESS;
+      else if(hour() < 10) brightness = MIN_BRIGHTNESS + (((((hour()-8)*3600) + (minute()*60) + second())*(uint32_t)(255-MIN_BRIGHTNESS))/7200); // TODO: replace with map
       else if(hour() < 21) brightness = 255;
-      else brightness = 255 - (((((hour()-21)*3600) + (minute()*60) + second())*(uint32_t)(255-minB))/10800);
+      else brightness = 255 - (((((hour()-21)*3600) + (minute()*60) + second())*(uint32_t)(255-MIN_BRIGHTNESS))/10800); // TODO replace with map
     }
 
-    if(autoHue) {
+    if (autoHue) {
       leds[STATUS_LED_AUTOHUE] = CRGB::Blue;
 
       // red at 8 then through the spectrum from there
@@ -148,10 +150,11 @@ void writeTime(int hours, int mins) {
   writeNumber(2,c3,CHSV(hue, 255, 255));
   writeNumber(3,c4,CHSV(hue+30, 255, 255));
 
-  for(int i = 0; i<WIDTH; i++) { // bottom row
-    if(second()>=(i*5) && second()<((i*5)+5)) 
-      leds[XY(i,HEIGHT-1)] = CHSV((int)((i*255)/WIDTH), 200, 255);
-  }
+  float seconds_ind_length = 60 / WIDTH; // how many seconds each of the bottom represent
+
+  for (int i = 0; i<WIDTH; i++) // bottom row
+    if (second() >= (i*seconds_ind_length) && second() < ((i*seconds_ind_length)+seconds_ind_length)) 
+      leds[XY(i,HEIGHT-1)] = CHSV((int)((i*255)/WIDTH), 200, 255); // rainbow colours across the bottom
   
   FastLED.show();
 }

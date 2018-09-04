@@ -113,10 +113,14 @@ void loop()
     if (autoB) {
       leds[STATUS_LED_AUTOB] = CRGB::Blue;
       
-      if(hour() < 8) brightness = MIN_BRIGHTNESS;
-      else if(hour() < 10) brightness = MIN_BRIGHTNESS + (((((hour()-8)*3600) + (minute()*60) + second())*(uint32_t)(255-MIN_BRIGHTNESS))/7200); // TODO: replace with map
-      else if(hour() < 21) brightness = 255;
-      else brightness = 255 - (((((hour()-21)*3600) + (minute()*60) + second())*(uint32_t)(255-MIN_BRIGHTNESS))/10800); // TODO replace with map
+      if(hour() < 8)
+        brightness = MIN_BRIGHTNESS;
+      else if(hour() < 12) // fade in over 4 hours
+        brightness = map( ((hour()-8)*60*60) + minute()*60 + second(), 0, 4*60*60, MIN_BRIGHTNESS, MAX_BRIGHTNESS);
+      else if(hour() < 21)
+        brightness = MAX_BRIGHTNESS;
+      else // fade out over 3 hours
+        brightness = map( ((hour()-21)*60*60) + minute()*60 + second(), 0, 3*60*60, MAX_BRIGHTNESS, MIN_BRIGHTNESS);
     }
 
     if (autoHue) {

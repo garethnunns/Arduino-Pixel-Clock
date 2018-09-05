@@ -21,7 +21,7 @@
 #define MAX_BRIGHTNESS 255 // minimum brightness for auto brightness
 
 uint8_t brightness = 255, hue = 0;
-bool autoHue = true, autoB = true faded = false;
+bool autoHue = true, autoB = true, faded = false;
 uint32_t ms;
 CRGB leds[NUM_LEDS];
 
